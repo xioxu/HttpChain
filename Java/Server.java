@@ -19,24 +19,33 @@ public class Server{
 	static public int CONNECT_PAUSE = 5; // 每次建立连接的间隔时间
 	static public int TIMEOUT = 50; // 每次尝试连接的最大时间
 
-	static public String serverAddr = "yourProxyServerAddr"; 
-	static public int serverPort = yourProxyServerPort;
+	
 	public static void main(String[] args) {
-		(new Server()).run();
+		int defaultLocalProxyPort = 9093;
+		
+		if(args.length == 2){
+			(new Server()).run(args[0],Integer.parseInt(args[1]),defaultLocalProxyPort);
+		}
+		else if(args.length == 3){
+			(new Server()).run(args[0],Integer.parseInt(args[1]),Integer.parseInt(args[2]));
+		} else{
+			System.out.println("Wrong parameter。 \r\n Usage: java -jar HttpProxyChain.jar yoursvrAddr svrPort  \r\n or \r\n java -jar HttpProxyChain.jar yoursvrAddr svrPort listenPort");
+		}
+		
 	}
 
  
-	public void run() {
+	public void run(String svr,int port,int localProxyPort) {
 		try {
 
 			Socket socket;
-			int httpPort = 9093;
+			
 			ServerSocket serverSocket = new ServerSocket(9093);
-			Log.debug("代理服务器启动，监听端口：" + httpPort);
+			Log.debug("Proxy chain has been started, listening port:" + localProxyPort);
 			
 			try {
 				while ((socket = serverSocket.accept()) != null) {
-					(new Handler(socket)).start();
+					(new Handler(socket,svr,port)).start();
 				}
 			} catch (IOException e) {
 				e.printStackTrace(); // TODO: implement catch
@@ -49,12 +58,16 @@ public class Server{
 
 	public static class Handler extends Thread {
 
+		private String serverAddr = ""; 
+		private int serverPort = 80;
 		private final Socket clientSocket;
 		
 		private  ExecutorService cachedThreadPool = Executors.newCachedThreadPool();  
 
-		public Handler(Socket clientSocket) {
+		public Handler(Socket clientSocket,String svr,int port) {
 			this.clientSocket = clientSocket;
+			serverAddr = svr;
+			serverPort = port;
 		}
 
 		@Override
