@@ -2,8 +2,9 @@ var tls = require('tls');
 var net = require('net');
 var local_port = 9094;
 
-var proxyPort = 443;
-var proxyAddr = "yourproxyserver";
+//支持https端口443 或者普通端口
+var proxyPort = 8787;
+var proxyAddr = "localhost";
 
 //在本地创建一个server监听本地local_port端口
 net.createServer(function (client)
@@ -28,19 +29,32 @@ net.createServer(function (client)
    
         
         //建立到代理服务器的连接
-		 var server = tls.connect(proxyPort,proxyAddr,function( ){
-		     
-        //交换服务器与浏览器的数据
-        client.on("data", function(data){ server.write(data); });
-		  client.on("error", function(err){ console.log("a1");console.log(err); client.removeAllListeners("data");});
-		  client.on("end", function(err){console.log("a1--"); client.removeAllListeners("data"); });
-		  
-        server.on("data", function(data){ client.write(data); });
-		 server.on("error", function(err){ console.log("a2");console.log(err); server.removeAllListeners("data");});
-		  server.on("end", function(err){ console.log("a2--");server.removeAllListeners("data");  });
+		var server = null;
+		var callback = function(server){
+			//交换服务器与浏览器的数据
+			
+			client.on("data", function(data){ server.write(data); });
+			client.on("error", function(err){ console.log("a1");console.log(err); client.removeAllListeners("data");});
+			client.on("end", function(err){console.log("a1--"); client.removeAllListeners("data"); });
+			  
+			server.on("data", function(data){ client.write(data); });
+			server.on("error", function(err){ console.log("a2");console.log(err); server.removeAllListeners("data");});
+			server.on("end", function(err){ console.log("a2--");server.removeAllListeners("data");  });
 
-			 server.write(buffer);			 
-		 });
+			server.write(buffer);	
+		 };
+		 
+		if(proxyPort == 443){
+		    server = tls.connect(proxyPort,proxyAddr, function(){
+			   callback(server)();
+			});
+		}
+		else {
+		    server = net.connect(proxyPort,proxyAddr, function(){
+			   callback(server)();
+			});
+		}
+		
 		
     }
 }).listen(local_port);
