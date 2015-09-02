@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.net.SocketFactory;
 import javax.net.ssl.SSLContext;
 
 public class Server{
@@ -40,7 +41,7 @@ public class Server{
 
 			Socket socket;
 			
-			ServerSocket serverSocket = new ServerSocket(9093);
+			ServerSocket serverSocket = new ServerSocket(localProxyPort);
 			Log.debug("Proxy chain has been started, listening port:" + localProxyPort);
 			
 			try {
@@ -78,7 +79,14 @@ public class Server{
 				request = readHeader(clientSocket);
 				Log.debug(request);
  
-				Socket forwardSocket =  SSLContext.getDefault().getSocketFactory().createSocket(serverAddr, serverPort);;
+				Socket forwardSocket = null;
+				
+				if(serverPort == 443){
+					forwardSocket =  SSLContext.getDefault().getSocketFactory().createSocket(serverAddr, serverPort);
+				}
+				else{
+					forwardSocket = SocketFactory.getDefault().createSocket(serverAddr, serverPort);
+				}
  
 		      	forwardSocket.getOutputStream().write(request.getBytes());
 				pipe(clientSocket,forwardSocket);
